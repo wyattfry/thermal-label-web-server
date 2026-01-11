@@ -13,6 +13,7 @@ Python packages:
 - Flask (required)
 - Pillow (required for image processing and manual edit UI)
 - PyMuPDF (required for PDF processing)
+- pywin32 (required for Windows service support)
 
 ## Install
 
@@ -49,3 +50,34 @@ Open `http://localhost:8088`.
 - PDFs are rasterized with PyMuPDF; images are processed with Pillow.
 - Multi-page PDFs are rendered page-by-page.
 - If PDF processing fails, check `C:\label-upload\logs\label-upload.log`.
+- Service logs are written to `C:\label-upload\logs\service.log`.
+
+
+## Windows service
+
+Install pywin32 first:
+
+```powershell
+python -m pip install pywin32
+```
+
+Use `service.ps1` to manage the app as a Windows service. `-Port` and `-AppPath` are stored at install time.
+
+```powershell
+# install (auto-start)
+.\service.ps1 -install -PythonExe "C:\Path\To\python.exe"
+
+# start / stop
+.\service.ps1 -start
+.\service.ps1 -stop
+
+# enable / disable auto-start
+.\service.ps1 -enable
+.\service.ps1 -disable
+
+# uninstall
+.\service.ps1 -uninstall
+
+# status
+.\service.ps1 -status
+```
