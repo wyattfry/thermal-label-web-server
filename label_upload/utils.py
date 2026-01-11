@@ -39,3 +39,24 @@ def resolve_uploaded_files(names: List[str]) -> List[str]:
         if os.path.isfile(path):
             paths.append(path)
     return paths
+
+def cleanup_files(upload_path: str, processed_paths: list[str]) -> None:
+    candidates = set()
+    if upload_path:
+        candidates.add(upload_path)
+    for path in processed_paths or []:
+        if not path:
+            continue
+        candidates.add(path)
+        base, ext = os.path.splitext(path)
+        if base.endswith("_processed"):
+            candidates.add(base[:-10] + ext)
+        debug_suffixes = ["_debug_raw.png", "_debug_bw.png", "_debug_bbox.png"]
+        for suffix in debug_suffixes:
+            candidates.add(base + suffix)
+    for path in candidates:
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+        except Exception:
+            pass

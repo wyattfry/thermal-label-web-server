@@ -8,7 +8,7 @@ from flask import redirect, render_template, request, send_from_directory, url_f
 from .printing import send_to_printer
 from .processing import debug_files_for, finalize_label_image, process_image, process_pdf
 from .settings import LABEL_DPI, SUMATRA, UPLOAD_DIR
-from .utils import allowed, log_error, resolve_uploaded_files, safe_name
+from .utils import allowed, cleanup_files, log_error, resolve_uploaded_files, safe_name
 
 
 def register_routes(app):
@@ -81,6 +81,7 @@ def register_routes(app):
         error = send_to_printer(print_paths)
         if error:
             return render_template("index.html", message=error)
+        cleanup_files(out_path, print_paths)
 
         msg = quote("Print submitted")
         return redirect(url_for("index") + f"?msg={msg}")
@@ -94,6 +95,7 @@ def register_routes(app):
         error = send_to_printer(paths)
         if error:
             return render_template("index.html", message=error)
+        cleanup_files("", paths)
         msg = quote("Print submitted")
         return redirect(url_for("index") + f"?msg={msg}")
 
