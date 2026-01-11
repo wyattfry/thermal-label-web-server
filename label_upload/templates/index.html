@@ -5,63 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Thermal Label Printer</title>
     <style>
-      body { font-family: sans-serif; margin: 24px; }
-      .box { max-width: 520px; }
-      form { display: grid; gap: 16px; }
-      label { font-size: 14px; color: #333; }
-      input[type=file], select, button { width: 100%; font-size: 16px; }
-      input[type=file] { padding: 6px 0; }
-      select { padding: 8px 10px; }
-      button { padding: 12px 14px; }
-      .status { margin-top: 16px; padding: 10px; background: #f4f4f4; }
-      .actions { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-      .checkbox { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-      .checkbox input { width: auto; }
+      :root {
+        --bg: #f7f5f2;
+        --card: #ffffff;
+        --text: #1f1f1f;
+        --muted: #6b6b6b;
+        --accent: #1e88e5;
+        --border: #d8d5d0;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: var(--bg); color: var(--text); }
+      .page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 32px 20px; gap: 24px; }
+      h1 { margin: 0; font-size: 26px; letter-spacing: 0.5px; text-align: center; }
+      .panel { width: min(860px, 100%); background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08); }
+      form { display: grid; gap: 14px; }
+      .controls { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items: center; }
+      .btn { display: inline-flex; justify-content: center; align-items: center; padding: 16px; border-radius: 12px; border: 1px solid transparent; font-size: 16px; cursor: pointer; transition: transform 0.08s ease, box-shadow 0.08s ease; }
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+      .btn.primary { background: var(--accent); color: #fff; }
+      .btn.secondary { background: #efede9; color: var(--text); border-color: var(--border); }
+      .btn:active { transform: translateY(1px); }
+      input[type=file] { display: none; }
+      .hint { margin: 0; font-size: 13px; color: var(--muted); text-align: center; }
+      details { border-top: 1px solid var(--border); padding-top: 12px; }
+      summary { cursor: pointer; font-weight: 600; }
+      label { font-size: 13px; color: var(--muted); }
+      select { width: 100%; padding: 8px 10px; font-size: 14px; border-radius: 8px; border: 1px solid var(--border); }
+      .checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+      .status { margin-top: 12px; padding: 10px 12px; background: #efece6; border-radius: 10px; font-size: 14px; text-align: center; }
+      .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #262626; color: #fff; padding: 10px 14px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+      .toast.show { opacity: 1; }
     </style>
   </head>
   <body>
-    <div class="box">
-      <h2>Thermal Label Printer</h2>
-      <p>Supported formats: PDF, PNG, JPG, JPEG, TIFF, BMP, GIF</p>
-      <p>Multi-page PDFs print one page per label. Image options apply to images and PDFs.</p>
-      <p>PDF crop/rotate requires PyMuPDF (pip install pymupdf).</p>
-      <p>If PDF processing fails, check logs in C:\label-upload\logs.</p>
-      <form method="post" action="/print" enctype="multipart/form-data">
-        <div>
-          <label for="file">Choose file</label>
+    <div class="page">
+      <h1>Thermal Label Printer</h1>
+      <div class="panel">
+        <form id="uploadForm" method="post" action="/print" enctype="multipart/form-data">
+          <input type="hidden" name="action" id="action" value="preview" />
           <input id="file" type="file" name="file" required />
-        </div>
-        <div>
-          <label for="mode">Image mode</label>
-          <select id="mode" name="mode">
-            <option value="auto_detect" selected>Auto detect (crop label, auto-rotate)</option>
-            <option value="crop_center">Crop center to fill 4x6</option>
-            <option value="crop_top">Crop top (label near top)</option>
-            <option value="stretch">Stretch to fill 4x6</option>
-            <option value="fit">Fit with margins</option>
-          </select>
-        </div>
-        <div>
-          <label for="rotate">Rotate</label>
-          <select id="rotate" name="rotate">
-            <option value="0">0 deg</option>
-            <option value="90">90 deg</option>
-            <option value="180">180 deg</option>
-            <option value="270">270 deg</option>
-          </select>
-        </div>
-        <div class="checkbox">
-          <input id="debug" type="checkbox" name="debug" value="1" />
-          <label for="debug">Save auto-detect debug images</label>
-        </div>
-        <div class="actions">
-          <button type="submit" name="action" value="print">Print</button>
-          <button type="submit" name="action" value="preview">Preview</button>
-        </div>
-      </form>
-      {% if message %}
-      <div class="status">{{ message }}</div>
-      {% endif %}
+          <div class="controls">
+            <label class="btn secondary" for="file">Upload File to Print</label>
+            <button class="btn primary" type="submit" id="printBtn" disabled>Print</button>
+          </div>
+          <p class="hint">Accepted: PDF, PNG, JPG, JPEG, TIFF, BMP, GIF</p>
+          <details>
+            <summary>Advanced</summary>
+            <div class="controls" style="margin-top: 12px;">
+              <div>
+                <label for="mode">Image mode</label>
+                <select id="mode" name="mode">
+                  <option value="auto_detect" selected>Auto detect (crop label, auto-rotate)</option>
+                  <option value="crop_center">Crop center to fill 4x6</option>
+                  <option value="crop_top">Crop top (label near top)</option>
+                  <option value="stretch">Stretch to fill 4x6</option>
+                  <option value="fit">Fit with margins</option>
+                </select>
+              </div>
+              <div>
+                <label for="rotate">Rotate</label>
+                <select id="rotate" name="rotate">
+                  <option value="0">0 deg</option>
+                  <option value="90">90 deg</option>
+                  <option value="180">180 deg</option>
+                  <option value="270">270 deg</option>
+                </select>
+              </div>
+            </div>
+            <div class="checkbox" style="margin-top: 10px;">
+              <input id="debug" type="checkbox" name="debug" value="1" />
+              <label for="debug">Save auto-detect debug images</label>
+            </div>
+          </details>
+        </form>
+        {% if message %}
+        <div class="status">{{ message }}</div>
+        {% endif %}
+      </div>
     </div>
+    <div class="toast" id="toast">{{ message or '' }}</div>
+    <script>
+      const fileInput = document.getElementById('file');
+      const uploadForm = document.getElementById('uploadForm');
+      const actionField = document.getElementById('action');
+      const printBtn = document.getElementById('printBtn');
+      const toast = document.getElementById('toast');
+
+      fileInput.addEventListener('change', () => {
+        if (!fileInput.files.length) {
+          return;
+        }
+        actionField.value = 'preview';
+        uploadForm.submit();
+      });
+
+      printBtn.addEventListener('click', () => {
+        actionField.value = 'print';
+      });
+
+      if (toast.textContent.trim()) {
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+      }
+    </script>
   </body>
 </html>
