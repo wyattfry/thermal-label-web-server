@@ -1,13 +1,65 @@
-## TODO
+# AGENTS.md
 
-- [ ] extract hard coded configuration to a proper config file
-- [ ] split single py file into a conventional python project structure
-- [ ] update README.md with missing info, e.g. prerequisites, installing
-- [ ] update web UI, make it minimal, see below
-- [ ] a ps1 file to install, enable, disable, or uninstall it as a Windows service
-- [ ] it should delete the file(s) after printing
+## Project Overview
+- Name: label-upload
+- Purpose: Windows Flask app that uploads files and prints 4x6 labels on a USB thermal printer (SumatraPDF backend).
+- Current entrypoint: app.py
+- Runtime: Windows, Flask, SumatraPDF, optional PyMuPDF + Pillow.
 
+## Environment
+- Working dir: C:\label-upload
+- Printer: configured in app.py (PRINTER)
+- PDF viewer/print tool: SumatraPDF (SUMATRA path in app.py)
+- Uploads/logs: C:\label-upload\uploads, C:\label-upload\logs
 
-## UI Redesign
+## How Agents Should Work
+- Prefer small, incremental changes with clear acceptance criteria.
+- Keep changes ASCII-only unless file already uses Unicode.
+- Do not remove user changes or revert unrelated changes.
+- If a change is large (structure or config), propose a plan before editing.
 
-When first visiting the page, it just says "Thermal Label Printer" centered at top, and below that, on the left, a big "Upload File to Print" button, and under that a hint text with accepted file extensions. On the right, a grayed out / disabled "Print" button. After uploading a file, the a preview is automatically displayed below the buttons, and on mobile, scaled to fit the remaining height and width of the screen. When "Print" is tapped / clicked, it disables the print button, has some progress message, then an outcome message, can be overlayed on the print preview. It disappears after a few seconds. The user can then click Print to print again, or Upload to upload a different file. Feel free to modify any of the above in the interest of simplicity. An alternative would be to keep the current design but hide everything except the Upload and Print buttons behind a collapsable "Advanced" button. That might be better than all the overly complex things above. Your call.
+## Current Priorities (in order)
+1) Convert hard-coded config into a proper config file.
+2) Split the single Python file into a conventional project layout.
+3) Update README.md with prerequisites + install/run steps.
+4) UI redesign to a simpler upload/preview/print flow.
+5) Add PowerShell installer to install/enable/disable/uninstall as a Windows service.
+6) Delete uploaded files after printing (including processed/debug artifacts).
+
+## Task Notes and Acceptance Criteria
+### 1) Config file
+- Add a config file (e.g., config.json or .env).
+- Move APP_DIR, SUMATRA, PRINTER, PRINT_SETTINGS, LABEL_DPI, etc.
+- App should boot with defaults if config is missing.
+
+### 2) Project structure
+- Break app.py into a package (app/, templates/, static/, etc.).
+- Keep behavior unchanged unless explicitly requested.
+
+### 3) README
+- Document prerequisites: Python, SumatraPDF, optional PyMuPDF/Pillow.
+- Include install/run steps and how to configure printer/path.
+
+### 4) UI redesign
+- Prefer a minimal UI with Upload + Print, hidden advanced options.
+- After upload, show preview; on mobile, scale to viewport.
+- Print button should show progress and outcome message overlay.
+- If simpler: keep current design but hide advanced controls behind "Advanced".
+
+### 5) Windows service helper
+- Provide a single PS1 script: install/enable/disable/uninstall.
+- Should be idempotent and safe to re-run.
+
+### 6) Cleanup after printing
+- Delete uploaded and derived files after successful print.
+- Ensure multi-page PDFs are handled safely.
+
+## Files of Interest
+- app.py
+- uploads/
+- logs/
+- README.md (to be updated)
+
+## Testing Guidance
+- There are no automated tests yet.
+- Validate by uploading a PDF/image and verifying preview + print behavior.

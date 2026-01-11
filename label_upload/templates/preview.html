@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Print Preview</title>
+    <style>
+      body { font-family: sans-serif; margin: 24px; }
+      .box { max-width: 860px; }
+      .preview-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+      .label { width: 100%; aspect-ratio: 2 / 3; background: #fff; border: 1px solid #ddd; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); display: flex; align-items: center; justify-content: center; }
+      .label img { max-width: 100%; max-height: 100%; object-fit: contain; }
+      .actions { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 16px; }
+      button { padding: 12px 14px; font-size: 16px; }
+      .actions a { display: inline-block; padding: 12px 14px; background: #eee; color: #222; text-decoration: none; text-align: center; }
+      .file-actions { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+      .file-actions a { padding: 6px 10px; background: #f2f2f2; color: #222; text-decoration: none; font-size: 13px; border-radius: 4px; }
+      .debug { margin-top: 6px; font-size: 12px; color: #555; text-align: center; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+      .debug a { color: #333; text-decoration: none; background: #f6f6f6; padding: 4px 6px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h2>Print Preview</h2>
+      <p>Rendered at 4x6. If it looks correct, click Print.</p>
+      <div class="preview-grid">
+        {% for f in files %}
+          <div>
+            <div class="label">
+              <img src="{{ url_for('files', filename=f) }}" alt="Preview {{ loop.index }}" />
+            </div>
+            <div class="file-actions">
+              <a href="{{ url_for('edit_file', filename=f) }}">Edit crop/rotate</a>
+            </div>
+            {% if debug_files.get(f) %}
+              <div class="debug">
+                {% for d in debug_files.get(f) %}
+                  <a href="{{ url_for('files', filename=d) }}">{{ d }}</a>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <form method="post" action="/print-processed" class="actions">
+        {% for f in files %}
+        <input type="hidden" name="files" value="{{ f }}" />
+        {% endfor %}
+        <button type="submit">Print</button>
+        <a href="/">Back</a>
+      </form>
+    </div>
+  </body>
+</html>
