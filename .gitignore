@@ -1,3 +1,9 @@
 logs
 uploads
 __pycache__
+.sumatrapdf/
+*.pyc
+.DS_Store
+*.egg-info/
+dist/
+build/

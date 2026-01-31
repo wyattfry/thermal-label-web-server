@@ -1,10 +1,22 @@
 import os
 import socket
+import platform
+import sys
 
-from label_upload import create_app
+from server import create_app
 
 
 if __name__ == "__main__":
+    if platform.system() != "Windows":
+        raise SystemExit("This application can only run on Windows.")
+    if sys.version_info < (3, 9, 0):
+        raise SystemExit("Python version 3.9 or higher is required.")
+    try:
+        import flask  # noqa: F401
+        import PIL  # noqa: F401
+        import fitz  # noqa: F401
+    except ImportError as exc:
+        raise SystemExit(f"Missing required package: {exc.name}. Please install all dependencies.") from exc
     host = "0.0.0.0"
     port = 8088
     print(f"Starting label uploader from {__file__} (pid {os.getpid()})")

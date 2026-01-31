@@ -38,7 +38,7 @@ def _configure_paths(app_path):
 
 def _configure_logging():
     try:
-        from label_upload.settings import LOG_DIR
+        from server.settings import LOG_DIR
         os.makedirs(LOG_DIR, exist_ok=True)
         log_path = os.path.join(LOG_DIR, "service.log")
         logging.basicConfig(
@@ -60,7 +60,7 @@ if app_path_arg:
     SERVICE_APP_PATH = app_path_arg
 _configure_paths(SERVICE_APP_PATH)
 
-from label_upload import create_app
+from server import create_app
 
 
 class LabelUploadService(win32serviceutil.ServiceFramework):

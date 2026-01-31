@@ -1,0 +1,31 @@
+# License
+
+This project is provided as-is. See details below for third-party components.
+
+## SumatraPDF
+
+This project automatically downloads and uses **SumatraPDF**, which is licensed under the **GNU General Public License v3 (GPLv3)**.
+
+- **Project**: https://www.sumatrapdfreader.org/
+- **License**: GPL v3
+- **Download**: https://www.sumatrapdfreader.org/download-free-pdf-viewer
+
+SumatraPDF is used for silent PDF printing to thermal printers. The bundled version is extracted to `.sumatrapdf/` at runtime and is not included in this repository.
+
+For the full text of the GPL v3 license, see: https://www.gnu.org/licenses/gpl-3.0.html
+
+## Project Source Code
+
+The source code of this project (excluding SumatraPDF) is available under the terms you choose. If you redistribute this project, you must:
+1. Comply with SumatraPDF's GPL v3 license
+2. Provide appropriate attribution to SumatraPDF
+3. Make any modifications available under compatible terms
+
+## Third-Party Python Libraries
+
+This project uses several Python libraries. See `requirements.txt` for the complete list:
+- Flask (BSD)
+- Pillow (HPND)
+- PyMuPDF (AGPL)
+
+Ensure you comply with each library's respective license when using this project.
