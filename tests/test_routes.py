@@ -1,0 +1,56 @@
+from pathlib import Path
+
+import server
+import server.routes as routes
+import server.utils as utils
+
+
+def create_test_app(tmp_path: Path, monkeypatch):
+    upload_dir = tmp_path / "uploads"
+    log_dir = tmp_path / "logs"
+
+    monkeypatch.setattr(server, "UPLOAD_DIR", str(upload_dir))
+    monkeypatch.setattr(server, "LOG_DIR", str(log_dir))
+    monkeypatch.setattr(routes, "UPLOAD_DIR", str(upload_dir))
+    monkeypatch.setattr(utils, "UPLOAD_DIR", str(upload_dir))
+    monkeypatch.setattr(utils, "LOG_DIR", str(log_dir))
+
+    return server.create_app(), upload_dir
+
+
+def test_preview_text_generates_preview_file(tmp_path, monkeypatch):
+    app, upload_dir = create_test_app(tmp_path, monkeypatch)
+    client = app.test_client()
+
+    response = client.post("/preview-text", data={"text": "Storage A\nShelf 4"})
+
+    assert response.status_code == 200
+    assert b"Print" in response.data
+    generated = list(upload_dir.glob("*-text-label.png"))
+    assert len(generated) == 1
+    assert generated[0].name.encode() in response.data
+
+
+def test_print_processed_cleans_up_generated_preview(tmp_path, monkeypatch):
+    app, upload_dir = create_test_app(tmp_path, monkeypatch)
+    client = app.test_client()
+    preview_path = upload_dir / "preview-text-label.png"
+    preview_path.parent.mkdir(parents=True, exist_ok=True)
+    preview_path.write_bytes(b"preview")
+
+    monkeypatch.setattr(routes, "send_to_printer", lambda paths: None)
+
+    response = client.post("/print-processed", data={"files": [preview_path.name]})
+
+    assert response.status_code == 302
+    assert not preview_path.exists()
+
+
+def test_index_shows_enter_text_action(tmp_path, monkeypatch):
+    app, _ = create_test_app(tmp_path, monkeypatch)
+    client = app.test_client()
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert b"Enter Text" in response.data

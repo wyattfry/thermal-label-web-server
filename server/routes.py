@@ -8,6 +8,7 @@ from flask import redirect, render_template, request, send_from_directory, url_f
 from .printing import send_to_printer
 from .processing import debug_files_for, finalize_label_image, process_image, process_pdf
 from .settings import LABEL_DPI, SUMATRA, UPLOAD_DIR
+from .text_labels import render_text_label
 from .utils import allowed, cleanup_files, log_error, resolve_uploaded_files, safe_name
 
 
@@ -15,7 +16,7 @@ def register_routes(app):
     @app.route("/")
     def index():
         msg = request.args.get("msg")
-        return render_template("index.html", message=msg)
+        return render_template("index.html", message=msg, initial_text="")
 
     @app.errorhandler(Exception)
     def handle_exception(exc):
@@ -98,6 +99,19 @@ def register_routes(app):
         cleanup_files("", paths)
         msg = quote("Print submitted")
         return redirect(url_for("index") + f"?msg={msg}")
+
+    @app.route("/preview-text", methods=["POST"])
+    def preview_text():
+        text = request.form.get("text", "")
+        ts = time.strftime("%Y%m%d-%H%M%S")
+        out_path = os.path.join(UPLOAD_DIR, f"{ts}-text-label.png")
+        try:
+            render_text_label(text, out_path)
+        except ValueError:
+            return render_template("index.html", message="Enter text to preview", initial_text=text)
+
+        preview_files = [os.path.basename(out_path)]
+        return render_template("preview.html", files=preview_files, debug_files={}, initial_text=text)
 
     @app.route("/edit/<path:filename>")
     def edit_file(filename):
