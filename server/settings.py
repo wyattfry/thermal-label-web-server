@@ -11,7 +11,7 @@ LOG_DIR = os.path.join(APP_DIR, "logs")
 BUNDLED_SUMATRA = os.path.join(APP_DIR, ".sumatrapdf", "SumatraPDF.exe")
 # Fallback paths for system-installed SumatraPDF
 SYSTEM_SUMATRA_PATHS = [
-    os.path.join(os.getenv("APPDATA", ""), "Local", "SumatraPDF", "SumatraPDF.exe"),
+    os.path.join(os.getenv("LOCALAPPDATA", ""), "SumatraPDF", "SumatraPDF.exe"),
     os.path.join(os.getenv("ProgramFiles", ""), "SumatraPDF", "SumatraPDF.exe"),
     os.path.join(os.getenv("ProgramFiles(x86)", ""), "SumatraPDF", "SumatraPDF.exe"),
 ]

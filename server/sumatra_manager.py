@@ -12,6 +12,15 @@ SUMATRA_VERSION = "3.5.2"
 SUMATRA_DOWNLOAD_URL = f"https://www.sumatrapdfreader.org/dl/rel/{SUMATRA_VERSION}/SumatraPDF-{SUMATRA_VERSION}-64.zip"
 SUMATRA_DIR_NAME = ".sumatrapdf"
 SUMATRA_EXE_NAME = "SumatraPDF.exe"
+DOWNLOAD_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) label-upload/1.0"
+
+
+def get_system_sumatra_paths() -> list[str]:
+    return [
+        os.path.join(os.getenv("LOCALAPPDATA", ""), "SumatraPDF", SUMATRA_EXE_NAME),
+        os.path.join(os.getenv("ProgramFiles", ""), "SumatraPDF", SUMATRA_EXE_NAME),
+        os.path.join(os.getenv("ProgramFiles(x86)", ""), "SumatraPDF", SUMATRA_EXE_NAME),
+    ]
 
 
 def get_bundled_sumatra_path(app_dir: str) -> str:
@@ -25,12 +34,7 @@ def is_sumatra_available(app_dir: str) -> bool:
     if os.path.exists(bundled):
         return True
     # Check system paths
-    system_paths = [
-        os.path.join(os.getenv("APPDATA", ""), "Local", "SumatraPDF", SUMATRA_EXE_NAME),
-        os.path.join(os.getenv("ProgramFiles", ""), "SumatraPDF", SUMATRA_EXE_NAME),
-        os.path.join(os.getenv("ProgramFiles(x86)", ""), "SumatraPDF", SUMATRA_EXE_NAME),
-    ]
-    return any(os.path.exists(p) for p in system_paths)
+    return any(os.path.exists(path) for path in get_system_sumatra_paths())
 
 
 def download_sumatra(app_dir: str) -> str:
@@ -53,11 +57,27 @@ def download_sumatra(app_dir: str) -> str:
     try:
         print(f"Downloading SumatraPDF {SUMATRA_VERSION}...")
         print(f"From: {SUMATRA_DOWNLOAD_URL}")
-        urllib.request.urlretrieve(SUMATRA_DOWNLOAD_URL, zip_path)
+        request = urllib.request.Request(
+            SUMATRA_DOWNLOAD_URL,
+            headers={"User-Agent": DOWNLOAD_USER_AGENT},
+        )
+        with urllib.request.urlopen(request, timeout=60) as response:
+            with open(zip_path, "wb") as handle:
+                shutil.copyfileobj(response, handle)
 
         print(f"Extracting to {sumatra_base}...")
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(sumatra_base)
+            executable_names = [
+                name
+                for name in zip_ref.namelist()
+                if os.path.basename(name).lower().startswith("sumatrapdf")
+                and name.lower().endswith(".exe")
+            ]
+            if not executable_names:
+                raise FileNotFoundError("SumatraPDF executable not found in archive")
+            with zip_ref.open(executable_names[0]) as source:
+                with open(sumatra_exe, "wb") as target:
+                    shutil.copyfileobj(source, target)
 
         # Clean up zip file
         os.remove(zip_path)
@@ -86,12 +106,7 @@ def ensure_sumatra_available(app_dir: str) -> str:
         return bundled
 
     # Check for system-installed version
-    system_paths = [
-        os.path.join(os.getenv("APPDATA", ""), "Local", "SumatraPDF", SUMATRA_EXE_NAME),
-        os.path.join(os.getenv("ProgramFiles", ""), "SumatraPDF", SUMATRA_EXE_NAME),
-        os.path.join(os.getenv("ProgramFiles(x86)", ""), "SumatraPDF", SUMATRA_EXE_NAME),
-    ]
-    for path in system_paths:
+    for path in get_system_sumatra_paths():
         if os.path.exists(path):
             return path
 
