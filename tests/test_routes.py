@@ -1,3 +1,4 @@
+import io
 from pathlib import Path
 
 import server
@@ -54,3 +55,57 @@ def test_index_shows_enter_text_action(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     assert b"Enter Text" in response.data
+
+
+def test_image_preview_does_not_require_sumatra(tmp_path, monkeypatch):
+    app, upload_dir = create_test_app(tmp_path, monkeypatch)
+    client = app.test_client()
+
+    response = client.post(
+        "/print",
+        data={
+            "action": "preview",
+            "mode": "fit",
+            "file": (io.BytesIO(png_bytes()), "label.png"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    assert b"Print Preview" in response.data
+    assert list(upload_dir.glob("*_processed.png"))
+
+
+def test_print_setup_failure_is_shown_to_user(tmp_path, monkeypatch):
+    app, upload_dir = create_test_app(tmp_path, monkeypatch)
+    client = app.test_client()
+    preview_path = upload_dir / "preview.png"
+    preview_path.parent.mkdir(parents=True, exist_ok=True)
+    preview_path.write_bytes(b"preview")
+    monkeypatch.setattr(
+        routes,
+        "send_to_printer",
+        lambda paths: "Printer setup failed: unavailable",
+    )
+
+    response = client.post("/print-processed", data={"files": [preview_path.name]})
+
+    assert response.status_code == 200
+    assert b"Printer setup failed: unavailable" in response.data
+    assert preview_path.exists()
+
+
+def test_missing_route_remains_404(tmp_path, monkeypatch):
+    app, _ = create_test_app(tmp_path, monkeypatch)
+
+    response = app.test_client().get("/favicon.ico")
+
+    assert response.status_code == 404
+
+
+def png_bytes():
+    from PIL import Image
+
+    output = io.BytesIO()
+    Image.new("RGB", (40, 60), "white").save(output, "PNG")
+    return output.getvalue()

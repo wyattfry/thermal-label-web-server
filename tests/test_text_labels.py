@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from PIL import Image
 from PIL import ImageDraw
 
@@ -55,3 +56,8 @@ def test_render_text_label_creates_centered_label_image(tmp_path: Path):
         image_center_y = image.height / 2
         assert abs(text_center_x - image_center_x) < image.width * 0.08
         assert abs(text_center_y - image_center_y) < image.height * 0.08
+
+
+def test_render_text_label_rejects_blank_text(tmp_path: Path):
+    with pytest.raises(ValueError, match="Missing text"):
+        render_text_label("  \n  ", str(tmp_path / "blank.png"))

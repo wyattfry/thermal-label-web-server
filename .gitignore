@@ -2,6 +2,7 @@ logs
 uploads
 __pycache__
 .sumatrapdf/
+.venv/
 *.pyc
 .DS_Store
 *.egg-info/

@@ -65,11 +65,11 @@ On first run, the app will automatically download SumatraPDF (~50 MB) and extrac
 
 The app can run as a Windows service (auto-start on boot). For service support, install `pywin32` (included in requirements.txt)
 
-Use `service.ps1` to manage the app as a Windows service. `-Port` and `-AppPath` are stored at install time.
+Use `service.ps1` to manage the app as a Windows service. Run these commands from an elevated PowerShell window. The service uses the global Python 3.11 selected by `py.exe`; the project virtual environment remains suitable for manual runs and tests.
 
 ```powershell
-# install (auto-start)
-.\service.ps1 -install -PythonExe "C:\Path\To\python.exe"
+# install or repair (auto-start)
+.\service.ps1 -install -PythonExe "py.exe"
 
 # start / stop
 .\service.ps1 -start

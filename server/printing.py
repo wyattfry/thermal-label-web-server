@@ -1,15 +1,13 @@
 import subprocess
 from typing import List, Optional
 
-from .settings import APP_DIR, PRINTER, PRINT_SETTINGS, SUMATRA
+from .settings import APP_DIR, PRINTER, PRINT_SETTINGS
 from .sumatra_manager import ensure_sumatra_available
 
 
 def send_to_printer(paths: List[str]) -> Optional[str]:
-    # Ensure SumatraPDF is available (download if necessary)
-    sumatra_exe = ensure_sumatra_available(APP_DIR)
-    
     try:
+        sumatra_exe = ensure_sumatra_available(APP_DIR)
         for print_path in paths:
             subprocess.run(
                 [
@@ -28,4 +26,6 @@ def send_to_printer(paths: List[str]) -> Optional[str]:
         return "Print timed out"
     except subprocess.CalledProcessError as exc:
         return f"Print failed: {exc}"
+    except (OSError, RuntimeError) as exc:
+        return f"Printer setup failed: {exc}"
     return None

@@ -1,13 +1,15 @@
 import os
 import pathlib
 import time
+import uuid
 from urllib.parse import quote
 
 from flask import redirect, render_template, request, send_from_directory, url_for
+from werkzeug.exceptions import HTTPException
 
 from .printing import send_to_printer
 from .processing import debug_files_for, finalize_label_image, process_image, process_pdf
-from .settings import LABEL_DPI, SUMATRA, UPLOAD_DIR
+from .settings import LABEL_DPI, UPLOAD_DIR
 from .text_labels import render_text_label
 from .utils import allowed, cleanup_files, log_error, resolve_uploaded_files, safe_name
 
@@ -20,6 +22,8 @@ def register_routes(app):
 
     @app.errorhandler(Exception)
     def handle_exception(exc):
+        if isinstance(exc, HTTPException):
+            return exc
         log_error(f"Unhandled error: {exc}")
         return render_template("index.html", message="Internal error. Check logs."), 500
 
@@ -36,13 +40,10 @@ def register_routes(app):
         if not allowed(safe):
             return render_template("index.html", message="Unsupported file type")
 
-        ts = time.strftime("%Y%m%d-%H%M%S")
+        ts = time.strftime("%Y%m%d-%H%M%S") + f"-{uuid.uuid4().hex[:8]}"
         out_name = f"{ts}-{safe}"
         out_path = os.path.join(UPLOAD_DIR, out_name)
         f.save(out_path)
-
-        if not os.path.exists(SUMATRA):
-            return render_template("index.html", message="SumatraPDF not found")
 
         mode = request.form.get("mode", "auto_detect")
         rotate = request.form.get("rotate", "0")
@@ -103,7 +104,7 @@ def register_routes(app):
     @app.route("/preview-text", methods=["POST"])
     def preview_text():
         text = request.form.get("text", "")
-        ts = time.strftime("%Y%m%d-%H%M%S")
+        ts = time.strftime("%Y%m%d-%H%M%S") + f"-{uuid.uuid4().hex[:8]}"
         out_path = os.path.join(UPLOAD_DIR, f"{ts}-text-label.png")
         try:
             render_text_label(text, out_path)

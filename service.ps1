@@ -10,28 +10,29 @@ param(
     [Parameter(ParameterSetName = "Flags")][switch]$uninstall,
     [Parameter(ParameterSetName = "Flags")][switch]$status,
     [string]$PythonExe = "",
-    [string]$ServiceScript = "C:\\label-upload\\service.py",
-    [string]$AppPath = "",
-    [int]$Port = 8088
+    [string]$ServiceScript = "C:\\label-upload\\service.py"
 )
 
 $ErrorActionPreference = "Stop"
+$ServiceName = "LabelUpload"
 
 function Resolve-PythonExe {
     param([string]$Preferred)
     if ($Preferred) {
+        if ((Split-Path -Leaf $Preferred) -ieq "py.exe") {
+            return (& $Preferred -3.11 -c "import sys; print(sys.executable)").Trim()
+        }
         return $Preferred
+    }
+    $launcher = Get-Command py.exe -ErrorAction SilentlyContinue
+    if ($launcher) {
+        return (& $launcher.Source -3.11 -c "import sys; print(sys.executable)").Trim()
     }
     $cmd = Get-Command python -ErrorAction SilentlyContinue
     if ($cmd) {
         return $cmd.Source
     }
     throw "Python executable not found. Pass -PythonExe with full path to python.exe."
-}
-
-$PythonExe = Resolve-PythonExe -Preferred $PythonExe
-if (-not (Test-Path $ServiceScript)) {
-    throw "ServiceScript not found: $ServiceScript"
 }
 
 if ($PSCmdlet.ParameterSetName -eq "Flags") {
@@ -44,17 +45,92 @@ if ($PSCmdlet.ParameterSetName -eq "Flags") {
     elseif ($status) { $Action = "status" }
 }
 
-$scriptArgs = @($ServiceScript, $Action)
-if ($Action -eq "install") {
-    if ($AppPath) {
-        $scriptArgs += @("--app-path", $AppPath)
-    }
-    if ($Port) {
-        $scriptArgs += @("--port", $Port)
-    }
+function Get-LabelService {
+    return Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 }
 
-& $PythonExe @scriptArgs | Out-Host
-if ($LASTEXITCODE -ne 0) {
-    throw "service.py failed with exit code $LASTEXITCODE"
+if ($Action -eq "install" -or $Action -eq "uninstall") {
+    $PythonExe = Resolve-PythonExe -Preferred $PythonExe
+    $ServiceScript = (Resolve-Path $ServiceScript).Path
+    $ServiceDir = Split-Path -Parent $ServiceScript
+    $ServiceFile = Split-Path -Leaf $ServiceScript
+}
+
+switch ($Action) {
+    "install" {
+        $PythonRoot = Split-Path -Parent $PythonExe
+        if (Test-Path (Join-Path (Split-Path -Parent $PythonRoot) "pyvenv.cfg")) {
+            throw "Windows service installation requires global Python. Pass -PythonExe py.exe."
+        }
+        $PostInstall = Join-Path (Split-Path -Parent $PythonExe) "pywin32_postinstall.py"
+        if (Test-Path $PostInstall) {
+            & $PythonExe $PostInstall -install -quiet
+            if ($LASTEXITCODE -ne 0) {
+                throw "pywin32 post-install failed with exit code $LASTEXITCODE"
+            }
+        }
+
+        $Command = if (Get-LabelService) { "update" } else { "install" }
+        Push-Location $ServiceDir
+        try {
+            & $PythonExe $ServiceFile --startup auto $Command
+            if ($LASTEXITCODE -ne 0) {
+                throw "service.py failed with exit code $LASTEXITCODE"
+            }
+        }
+        finally {
+            Pop-Location
+        }
+    }
+    "start" {
+        Start-Service -Name $ServiceName
+        (Get-Service -Name $ServiceName).WaitForStatus("Running", "00:00:30")
+        Get-Service -Name $ServiceName
+    }
+    "stop" {
+        $Service = Get-LabelService
+        if ($Service -and $Service.Status -ne "Stopped") {
+            Stop-Service -Name $ServiceName
+            $Service.WaitForStatus("Stopped", "00:00:30")
+        }
+        Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+    }
+    "enable" {
+        Set-Service -Name $ServiceName -StartupType Automatic
+        Get-Service -Name $ServiceName
+    }
+    "disable" {
+        Set-Service -Name $ServiceName -StartupType Disabled
+        Get-Service -Name $ServiceName
+    }
+    "uninstall" {
+        $Service = Get-LabelService
+        if (-not $Service) {
+            Write-Host "Service is not installed."
+            break
+        }
+        if ($Service.Status -ne "Stopped") {
+            Stop-Service -Name $ServiceName
+            $Service.WaitForStatus("Stopped", "00:00:30")
+        }
+        Push-Location $ServiceDir
+        try {
+            & $PythonExe $ServiceFile remove
+            if ($LASTEXITCODE -ne 0) {
+                throw "service.py failed with exit code $LASTEXITCODE"
+            }
+        }
+        finally {
+            Pop-Location
+        }
+    }
+    "status" {
+        $Service = Get-LabelService
+        if ($Service) {
+            $Service
+        }
+        else {
+            Write-Host "Service is not installed."
+        }
+    }
 }
